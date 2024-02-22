@@ -1,8 +1,10 @@
 import './App.css'
 
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
+import { AnimationClipCreator, RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+type Number3 = [number, number, number]
 
 function createCubeTexture() {
   const loader = new THREE.CubeTextureLoader();
@@ -128,9 +130,29 @@ function App() {
 
   scene.add(new THREE.AxesHelper(100));
 
+  const mixer = new THREE.AnimationMixer(edgeCube)
+  function moveEdgeCube(from: Number3, to: Number3) {
+    mixer.stopAllAction()
+    const values = from.concat(to)
+    const kfTrack = new THREE.VectorKeyframeTrack(".position", [0, 1], values)
+    const clip = new THREE.AnimationClip('default', 2, [kfTrack])
+    const clipAction = mixer.clipAction(clip)
+    clipAction.repetitions = 1
+    clipAction.clampWhenFinished = true
+    clipAction.play()
+  }
+
+  moveEdgeCube([0, 0, 0], [0, 0, 1])
+  setTimeout(() => moveEdgeCube([0, 0, 1], [0, 0, 2]), 2000)
+
+
+  const clock = new THREE.Clock()
+
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    const delta = clock.getDelta()
+    mixer.update(delta)
     renderer.render(scene, camera);
   }
   animate();
