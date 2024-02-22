@@ -3,6 +3,7 @@ import './App.css'
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createEffect, createSignal } from 'solid-js';
 
 
 function createCube(color?: THREE.ColorRepresentation) {
@@ -44,54 +45,81 @@ function createBlocks(width: number, height: number, depth: number, color?: THRE
 
 function createPaddedTensor(w: number, h: number, channels: number, padding: number, color1?: THREE.ColorRepresentation, color2?: THREE.ColorRepresentation) {
   const blocks = createBlocks(channels, w + 2 * padding, h + 2 * padding, color2)
-  blocks.setColor([0, channels, padding, w + padding, padding, h + padding], new THREE.Color(color1 ?? "red"))
+  blocks.setColor([0, channels, padding, w + padding, padding, h + padding], new THREE.Color(color1 ?? "white"))
   blocks.group.position.set(0, 0, 0)
   return blocks
 }
 
 
 function App() {
-  const wIn = 5;
-  const hIn = 5;
-  const channelIn = 8;
-  const padding = 1;
-  const filterSize = 3;
-  const channelOut = 9;
-  let wOut = (wIn - filterSize + 2 * padding) + 1;
-  let hOut = (hIn - filterSize + 2 * padding) + 1;
-
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x111111)
+  scene.background = new THREE.Color(0xffffff)
   const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(40, 15, 30)
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  function resizeCanvasToDisplaySize() {
+    const canvas = renderer.domElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+
+    if (canvas.width !== width || canvas.height !== height) {
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    }
+  }
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.target = new THREE.Vector3(20, 0, 0)
   controls.update();
 
-  const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "red", "white")
-  scene.add(tensor.group)
+  const tensors = new THREE.Group()
+  scene.add(tensors)
+  function populateTensors({ wIn, hIn, channelIn, padding, filterSize, channelOut }: {
+    wIn: number, hIn: number, channelIn: number, padding: number, filterSize: number, channelOut: number
+  }) {
 
-  const filterColors = ["blue", "cyan", "orange", "red", "yellow", "pink", "purple", "green", "gray"]
+    tensors.clear()
+    let wOut = (wIn - filterSize + 2 * padding) + 1;
+    let hOut = (hIn - filterSize + 2 * padding) + 1;
+    const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "white", "gray")
+    tensors.add(tensor.group)
 
-  let filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[0])
-  filter.group.position.set(15, 0, 0)
-  scene.add(filter.group)
+    const filterColors = ["blue", "cyan", "orange", "red", "yellow", "pink", "purple", "green"]
 
-  for (let i = 1; i < channelOut; i++) {
-    filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[i % filterColors.length])
-    filter.group.position.set(15, 0, -wIn - (filterSize + 1) * i)
-    scene.add(filter.group)
+    let filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[0])
+    filter.group.position.set(15, 0, 0)
+    tensors.add(filter.group)
+
+    for (let i = 1; i < channelOut; i++) {
+      filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[i % filterColors.length])
+      filter.group.position.set(15, 0, -wIn - (filterSize + 1) * i)
+      tensors.add(filter.group)
+    }
+
+
+    const tensorOut = createPaddedTensor(wOut, hOut, channelOut, 0)
+    tensorOut.group.position.set(30, 0, 0)
+    for (let i = 0; i < channelOut; i++) {
+      tensorOut.setColor([i, i + 1, 0, wOut, 0, hOut], new THREE.Color(filterColors[i % filterColors.length]))
+    }
+    tensors.add(tensorOut.group)
   }
 
+  const [filterSize, setFilterSize] = createSignal(1);
+  const [wIn, setWIn] = createSignal(5);
+  const [hIn, setHIn] = createSignal(5);
+  const [channelIn, setChannelIn] = createSignal(3);
+  const [channelOut, setChannelOut] = createSignal(5);
+  const [padding, setPadding] = createSignal(1);
+  createEffect(() => {
+    populateTensors({
+      wIn: wIn(), hIn: hIn(), channelIn: channelIn(), padding: padding(), filterSize: filterSize(), channelOut: channelOut()
+    })
+  });
 
-  const tensorOut = createPaddedTensor(wOut, hOut, channelOut, 0, "green")
-  tensorOut.group.position.set(30, 0, 0)
-  for (let i = 0; i < channelOut; i++) {
-    tensorOut.setColor([i, i + 1, 0, wOut, 0, hOut], new THREE.Color(filterColors[i % filterColors.length]))
-  }
-  scene.add(tensorOut.group)
+  populateTensors({
+    wIn: 5, hIn: 5, channelIn: 3, padding: 1, filterSize: 3, channelOut: 8
+  })
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 1)
   scene.add(ambientLight);
@@ -103,12 +131,23 @@ function App() {
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
+    resizeCanvasToDisplaySize()
     renderer.render(scene, camera);
   }
   animate();
 
   return (
-    <div>{renderer.domElement}</div>
+    <>
+      <div id='renderer'>{renderer.domElement}</div>
+      <div>
+        <input type='number' value={filterSize()} onchange={(el) => setFilterSize(Number.parseInt(el.target.value))} />
+        <input type='number' value={wIn()} onchange={(el) => setWIn(Number.parseInt(el.target.value))} />
+        <input type='number' value={hIn()} onchange={(el) => setHIn(Number.parseInt(el.target.value))} />
+        <input type='number' value={channelIn()} onchange={(el) => setChannelIn(Number.parseInt(el.target.value))} />
+        <input type='number' value={channelOut()} onchange={(el) => setChannelOut(Number.parseInt(el.target.value))} />
+        <input type='number' value={padding()} onchange={(el) => setPadding(Number.parseInt(el.target.value))} />
+      </div>
+    </>
   )
 }
 
