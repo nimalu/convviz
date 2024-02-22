@@ -8,7 +8,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 function createCube(color?: THREE.ColorRepresentation) {
   const geometry = new RoundedBoxGeometry(0.8, 0.8, 0.8);
   geometry.translate(0.5, 0.5, 0.5)
-  const material = new THREE.MeshLambertMaterial({ color });
+  const material = new THREE.MeshLambertMaterial({ color: color ?? "white" });
   const cube = new THREE.Mesh(geometry, material);
   return cube
 }
@@ -51,31 +51,46 @@ function createPaddedTensor(w: number, h: number, channels: number, padding: num
 
 
 function App() {
+  const wIn = 5;
+  const hIn = 5;
+  const channelIn = 8;
+  const padding = 1;
+  const filterSize = 3;
+  const channelOut = 9;
+  let wOut = (wIn - filterSize + 2 * padding) + 1;
+  let hOut = (hIn - filterSize + 2 * padding) + 1;
+
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111111)
   const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(40, 10, 30)
-  camera.lookAt(new THREE.Vector3(0, 0, 0))
+  camera.position.set(40, 15, 30)
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target = new THREE.Vector3(20, 0, 0)
   controls.update();
 
-  const tensor = createPaddedTensor(5, 5, 8, 1, "red", "white")
+  const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "red", "white")
   scene.add(tensor.group)
 
-  let filter = createPaddedTensor(3, 3, 8, 0, "blue")
+  const filterColors = ["blue", "cyan", "orange", "red", "yellow", "pink", "purple", "green", "gray"]
+
+  let filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[0])
   filter.group.position.set(15, 0, 0)
   scene.add(filter.group)
-  filter = createPaddedTensor(3, 3, 8, 0, "cyan")
-  filter.group.position.set(15, 0, -10)
-  scene.add(filter.group)
+
+  for (let i = 1; i < channelOut; i++) {
+    filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[i % filterColors.length])
+    filter.group.position.set(15, 0, -wIn - (filterSize + 1) * i)
+    scene.add(filter.group)
+  }
 
 
-  const tensorOut = createPaddedTensor(5, 5, 8, 0, "green")
-  tensorOut.setColor([0, 1, 0, 5, 0, 5], new THREE.Color("blue"))
-  tensorOut.setColor([1, 2, 0, 5, 0, 5], new THREE.Color("cyan"))
+  const tensorOut = createPaddedTensor(wOut, hOut, channelOut, 0, "green")
   tensorOut.group.position.set(30, 0, 0)
+  for (let i = 0; i < channelOut; i++) {
+    tensorOut.setColor([i, i + 1, 0, wOut, 0, hOut], new THREE.Color(filterColors[i % filterColors.length]))
+  }
   scene.add(tensorOut.group)
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 1)
@@ -84,9 +99,6 @@ function App() {
   const directionalLight = new THREE.DirectionalLight(0xffffff, 4)
   directionalLight.position.set(10, 20, 3)
   scene.add(directionalLight);
-
-  scene.add(new THREE.AxesHelper(100));
-
 
   function animate() {
     requestAnimationFrame(animate);
