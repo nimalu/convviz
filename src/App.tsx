@@ -1,7 +1,7 @@
 import './App.css'
 
 import * as THREE from 'three';
-import { RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
+import { CSS2DObject, CSS2DRenderer, RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Show, createEffect, createSignal } from 'solid-js';
 import NumberInput from './components/NumberInput';
@@ -58,18 +58,24 @@ function App() {
   const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(40, 15, 30)
   const renderer = new THREE.WebGLRenderer({ antialias: true });
+  const labelRenderer = new CSS2DRenderer()
+  labelRenderer.domElement.className = "label-renderer"
   function resizeCanvasToDisplaySize() {
-    const canvas = renderer.domElement;
-    const width = canvas.clientWidth;
-    const height = canvas.clientHeight;
+    const canvasWrapper = document.querySelector("#renderer");
+    if (!canvasWrapper) {
+      return
+    }
+    const width = canvasWrapper.clientWidth;
+    const height = canvasWrapper.clientHeight;
 
-    if (canvas.width !== width || canvas.height !== height) {
+    if (renderer.domElement.width !== width || renderer.domElement.height !== height) {
       renderer.setSize(width, height, false);
+      labelRenderer.setSize(width, height);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     }
   }
-  const controls = new OrbitControls(camera, renderer.domElement);
+  const controls = new OrbitControls(camera, labelRenderer.domElement);
   controls.target = new THREE.Vector3(20, 0, 0)
   controls.update();
 
@@ -80,9 +86,16 @@ function App() {
   }) {
 
     tensors.clear()
+    labelRenderer.domElement.innerHTML = ""
     let wOut = (wIn - filterSize + 2 * padding) / stride + 1;
     let hOut = (hIn - filterSize + 2 * padding) / stride + 1;
     const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "white", "gray")
+    const tensorInLabelDiv = document.createElement('div');
+    tensorInLabelDiv.className = 'label';
+    tensorInLabelDiv.innerHTML = `Input Tensor <br>${wIn}x${hIn}x${channelIn}`
+    const tensorInLabel = new CSS2DObject(tensorInLabelDiv);
+    tensorInLabel.position.set(channelIn / 2, 0, hIn + 4);
+    tensor.group.add(tensorInLabel);
     tensors.add(tensor.group)
 
     const filterColors = ["blue", "cyan", "orange", "red", "yellow", "pink", "purple", "green"]
@@ -97,6 +110,13 @@ function App() {
       tensors.add(filter.group)
     }
 
+    const filterLabelDiv = document.createElement('div');
+    filterLabelDiv.className = 'label';
+    filterLabelDiv.innerHTML = `${channelOut} Filters<br>${filterSize}x${filterSize}x${channelIn}`
+    const filterLabel = new CSS2DObject(filterLabelDiv);
+    filterLabel.position.set(15 + channelIn / 2, 0, hIn + 4);
+    tensor.group.add(filterLabel);
+
 
     const tensorOut = createPaddedTensor(wOut, hOut, channelOut, 0)
     tensorOut.group.position.set(30, 0, 0)
@@ -104,6 +124,13 @@ function App() {
       tensorOut.setColor([i, i + 1, 0, wOut, 0, hOut], new THREE.Color(filterColors[i % filterColors.length]))
     }
     tensors.add(tensorOut.group)
+
+    const tensorOutDiv = document.createElement('div');
+    tensorOutDiv.className = 'label';
+    tensorOutDiv.innerHTML = `Output tensor <br>${wOut}x${hOut}x${channelOut}`
+    const tensorOutLabel = new CSS2DObject(tensorOutDiv);
+    tensorOutLabel.position.set(30 + channelOut / 2, 0, hIn + 4);
+    tensor.group.add(tensorOutLabel);
   }
 
   const [filterSize, setFilterSize] = createSignal(1);
@@ -136,17 +163,19 @@ function App() {
   directionalLight.position.set(10, 20, 3)
   scene.add(directionalLight);
 
+
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
     resizeCanvasToDisplaySize()
     renderer.render(scene, camera);
+    labelRenderer.render(scene, camera)
   }
   animate();
 
   return (
     <>
-      <div id='renderer'>{renderer.domElement}</div>
+      <div id='renderer'>{renderer.domElement} {labelRenderer.domElement }</div>
       <div id='param-controls'>
         <NumberInput value={filterSize()} onchange={setFilterSize} label="filter size" />
         <NumberInput value={wIn()} onchange={setWIn} label='width' />
@@ -156,7 +185,7 @@ function App() {
         <NumberInput value={padding()} onchange={setPadding} label='padding' />
         <NumberInput value={stride()} onchange={setStride} label='stride' />
         <Show when={!isValid()}>
-        <div class="alert">Invalid combination</div>
+          <div class="alert">Invalid combination</div>
         </Show>
       </div>
     </>
