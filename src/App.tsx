@@ -1,10 +1,12 @@
 import './App.css'
 
+import chroma from "chroma-js";
 import * as THREE from 'three';
 import { CSS2DObject, CSS2DRenderer, RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Show, createEffect, createSignal } from 'solid-js';
 import NumberInput from './components/NumberInput';
+import { debounce } from '@solid-primitives/scheduled';
 
 
 function createCube(color?: THREE.ColorRepresentation) {
@@ -54,9 +56,9 @@ function createPaddedTensor(w: number, h: number, channels: number, padding: num
 
 function App() {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff)
+  scene.background = new THREE.Color(0xeeeeee)
   const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 15, 30)
+  camera.position.set(15, 15, 30)
   const renderer = new THREE.WebGLRenderer({ antialias: false });
   const labelRenderer = new CSS2DRenderer()
   labelRenderer.domElement.className = "label-renderer"
@@ -79,19 +81,21 @@ function App() {
     }
   }
   const controls = new OrbitControls(camera, labelRenderer.domElement);
+  controls.target.set(0, 2, 0)
   controls.update();
+
+  const [loading, setLoading] = createSignal(true)
 
   const tensors = new THREE.Group()
   scene.add(tensors)
   function populateTensors({ wIn, hIn, channelIn, padding, filterSize, channelOut, stride }: {
     wIn: number, hIn: number, channelIn: number, padding: number, filterSize: number, channelOut: number, stride: number
   }) {
-
     tensors.clear()
     labelRenderer.domElement.innerHTML = ""
     let wOut = (wIn - filterSize + 2 * padding) / stride + 1;
     let hOut = (hIn - filterSize + 2 * padding) / stride + 1;
-    const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "white", "gray")
+    const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "#fa70b5", "#ffd2e6")
     tensor.group.position.set(-channelIn - 5, 0, 0)
     const tensorInLabelDiv = document.createElement('div');
     tensorInLabelDiv.className = 'label';
@@ -101,7 +105,8 @@ function App() {
     tensor.group.add(tensorInLabel);
     tensors.add(tensor.group)
 
-    const filterColors = ["blue", "cyan", "orange", "red", "yellow", "pink", "purple", "green"]
+    const filterColors = chroma.scale(['#fafa6e', '#2a4858']).mode('lch').colors(channelOut);
+    console.log(filterColors)
 
     let filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[0])
     filter.group.position.set(0, hIn / 2 - filterSize / 2, wIn / 2 - filterSize / 2)
@@ -109,7 +114,7 @@ function App() {
 
     for (let i = 1; i < channelOut; i++) {
       filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[i % filterColors.length])
-      filter.group.position.set(0, hIn / 2 - filterSize / 2,  - (filterSize + 1) * (i+1))
+      filter.group.position.set(0, hIn / 2 - filterSize / 2, - (filterSize + 1) * (i + 1))
       tensors.add(filter.group)
     }
 
@@ -134,9 +139,13 @@ function App() {
     const tensorOutLabel = new CSS2DObject(tensorOutDiv);
     tensorOutLabel.position.set(2 * channelIn + 10 + channelOut / 2, 0, wIn + 4 + padding * 2);
     tensor.group.add(tensorOutLabel);
+
+    setLoading(false)
   }
 
-  const [filterSize, setFilterSize] = createSignal(1);
+  const debouncedPopulateTensors = debounce(populateTensors, 500)
+
+  const [filterSize, setFilterSize] = createSignal(3);
   const [wIn, setWIn] = createSignal(5);
   const [hIn, setHIn] = createSignal(5);
   const [channelIn, setChannelIn] = createSignal(3);
@@ -147,7 +156,8 @@ function App() {
     if (!isValid()) {
       return
     }
-    populateTensors({
+    setLoading(true)
+    debouncedPopulateTensors({
       wIn: wIn(), hIn: hIn(), channelIn: channelIn(), padding: padding(), filterSize: filterSize(), channelOut: channelOut(), stride: stride()
     })
   });
@@ -178,7 +188,7 @@ function App() {
 
   return (
     <>
-      <div id='renderer'>{renderer.domElement} {labelRenderer.domElement}</div>
+      <div id='renderer' classList={{loading: loading()}}>{renderer.domElement} {labelRenderer.domElement}</div>
       <div id='param-controls'>
         <NumberInput value={wIn()} onchange={setWIn} label='width' />
         <NumberInput value={hIn()} onchange={setHIn} label='height' />

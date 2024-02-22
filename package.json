@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@solid-primitives/scheduled": "^1.4.2",
+    "chroma-js": "^2.4.2",
     "solid-js": "^1.8.15",
     "three": "^0.161.0"
   },
