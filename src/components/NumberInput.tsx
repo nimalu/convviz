@@ -9,11 +9,9 @@ export default function NumberInput(props: props) {
     return <div class="number-input-wrapper">
         <label for={id}> {local.label} </label>
         <div class="number-input-control">
+            <button onclick={() => local.onchange(local.value - 1)}>-</button>
             <input value={local.value} id={id} onchange={el => local.onchange(Number.parseInt(el.target.value))} />
-            <div>
-                <button onclick={() => local.onchange(local.value + 1)}>+</button>
-                <button onclick={() => local.onchange(local.value - 1)}>-</button>
-            </div>
+            <button onclick={() => local.onchange(local.value + 1)}>+</button>
         </div>
     </div>
 }

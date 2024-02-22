@@ -56,7 +56,7 @@ function createPaddedTensor(w: number, h: number, channels: number, padding: num
 
 function App() {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xeeeeee)
+  scene.background = new THREE.Color(0xf3f4f6)
   const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.set(15, 15, 30)
   const renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -93,23 +93,23 @@ function App() {
   }) {
     tensors.clear()
     labelRenderer.domElement.innerHTML = ""
+
     let wOut = (wIn - filterSize + 2 * padding) / stride + 1;
     let hOut = (hIn - filterSize + 2 * padding) / stride + 1;
-    const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "#fa70b5", "#ffd2e6")
-    tensor.group.position.set(-channelIn - 5, 0, 0)
+
+    const tensorIn = createPaddedTensor(wIn, hIn, channelIn, padding, "#fa70b5", "#ffd2e6")
+    tensorIn.group.position.set(-channelIn - 5, 0, 0)
     const tensorInLabelDiv = document.createElement('div');
     tensorInLabelDiv.className = 'label';
-    tensorInLabelDiv.innerHTML = `Input Tensor <br>${wIn}x${hIn}x${channelIn} <br> (+padding)`
+    tensorInLabelDiv.innerHTML = `Tensor In<br>${wIn}x${hIn}x${channelIn} <br> (+padding)`
     const tensorInLabel = new CSS2DObject(tensorInLabelDiv);
     tensorInLabel.position.set(channelIn / 2, 0, wIn + padding * 2 + 4);
-    tensor.group.add(tensorInLabel);
-    tensors.add(tensor.group)
+    tensorIn.group.add(tensorInLabel);
+    tensors.add(tensorIn.group)
 
-    const filterColors = chroma.scale(['#fafa6e', '#2a4858']).mode('lch').colors(channelOut);
-    console.log(filterColors)
-
+    const filterColors = chroma.scale(['#2a4858', '#fafa6e']).mode('lch').colors(channelOut);
     let filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[0])
-    filter.group.position.set(0, hIn / 2 - filterSize / 2, wIn / 2 - filterSize / 2)
+    filter.group.position.set(0, hIn / 2 - filterSize / 4, wIn / 2 - filterSize / 4)
     tensors.add(filter.group)
 
     for (let i = 1; i < channelOut; i++) {
@@ -123,11 +123,11 @@ function App() {
     filterLabelDiv.innerHTML = `${channelOut} Filters<br>${filterSize}x${filterSize}x${channelIn}`
     const filterLabel = new CSS2DObject(filterLabelDiv);
     filterLabel.position.set(channelIn * 1.5 + 5, 0, wIn + 4 + padding * 2);
-    tensor.group.add(filterLabel);
+    tensorIn.group.add(filterLabel);
 
 
     const tensorOut = createPaddedTensor(wOut, hOut, channelOut, 0)
-    tensorOut.group.position.set(channelIn + 5, 0, 0)
+    tensorOut.group.position.set(channelIn + 5, (hIn + 2 * padding - hOut) / 2, (wIn + 2 * padding - wOut) / 2)
     for (let i = 0; i < channelOut; i++) {
       tensorOut.setColor([i, i + 1, 0, hOut, 0, wOut], new THREE.Color(filterColors[i % filterColors.length]))
     }
@@ -135,10 +135,10 @@ function App() {
 
     const tensorOutDiv = document.createElement('div');
     tensorOutDiv.className = 'label';
-    tensorOutDiv.innerHTML = `Output tensor <br>${wOut}x${hOut}x${channelOut}`
+    tensorOutDiv.innerHTML = `Tensor Out<br>${wOut}x${hOut}x${channelOut}`
     const tensorOutLabel = new CSS2DObject(tensorOutDiv);
     tensorOutLabel.position.set(2 * channelIn + 10 + channelOut / 2, 0, wIn + 4 + padding * 2);
-    tensor.group.add(tensorOutLabel);
+    tensorIn.group.add(tensorOutLabel);
 
     setLoading(false)
   }
@@ -188,19 +188,19 @@ function App() {
 
   return (
     <>
-      <div id='renderer' classList={{loading: loading()}}>{renderer.domElement} {labelRenderer.domElement}</div>
       <div id='param-controls'>
-        <NumberInput value={wIn()} onchange={setWIn} label='width' />
-        <NumberInput value={hIn()} onchange={setHIn} label='height' />
-        <NumberInput value={channelIn()} onchange={setChannelIn} label='channel in' />
-        <NumberInput value={filterSize()} onchange={setFilterSize} label="filter size" />
-        <NumberInput value={channelOut()} onchange={setChannelOut} label='channel out' />
-        <NumberInput value={padding()} onchange={setPadding} label='padding' />
-        <NumberInput value={stride()} onchange={setStride} label='stride' />
+        <NumberInput value={wIn()} onchange={setWIn} label='Width' />
+        <NumberInput value={hIn()} onchange={setHIn} label='Height' />
+        <NumberInput value={channelIn()} onchange={setChannelIn} label='Channel in' />
+        <NumberInput value={filterSize()} onchange={setFilterSize} label="Filter size" />
+        <NumberInput value={channelOut()} onchange={setChannelOut} label='Channel out' />
+        <NumberInput value={padding()} onchange={setPadding} label='Padding' />
+        <NumberInput value={stride()} onchange={setStride} label='Stride' />
         <Show when={!isValid()}>
           <div class="alert">Invalid combination</div>
         </Show>
       </div>
+      <div id='renderer' classList={{ loading: loading() }}>{renderer.domElement} {labelRenderer.domElement}</div>
     </>
   )
 }
