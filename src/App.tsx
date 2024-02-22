@@ -8,6 +8,7 @@ import { Show, createEffect, createSignal } from 'solid-js';
 import NumberInput from './components/NumberInput';
 import { debounce } from '@solid-primitives/scheduled';
 import Header from './components/Header';
+import GithubLink from './components/GithubLink';
 
 
 function createCube(color?: THREE.ColorRepresentation) {
@@ -201,6 +202,7 @@ function App() {
         <Show when={!isValid()}>
           <div class="alert">Invalid combination</div>
         </Show>
+        <GithubLink />
       </div>
       <div id='renderer' classList={{ loading: loading() }}>{renderer.domElement} {labelRenderer.domElement}</div>
     </>
