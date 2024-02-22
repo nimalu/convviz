@@ -3,7 +3,8 @@ import './App.css'
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/Addons.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createEffect, createSignal } from 'solid-js';
+import { Show, createEffect, createSignal } from 'solid-js';
+import NumberInput from './components/NumberInput';
 
 
 function createCube(color?: THREE.ColorRepresentation) {
@@ -74,13 +75,13 @@ function App() {
 
   const tensors = new THREE.Group()
   scene.add(tensors)
-  function populateTensors({ wIn, hIn, channelIn, padding, filterSize, channelOut }: {
-    wIn: number, hIn: number, channelIn: number, padding: number, filterSize: number, channelOut: number
+  function populateTensors({ wIn, hIn, channelIn, padding, filterSize, channelOut, stride }: {
+    wIn: number, hIn: number, channelIn: number, padding: number, filterSize: number, channelOut: number, stride: number
   }) {
 
     tensors.clear()
-    let wOut = (wIn - filterSize + 2 * padding) + 1;
-    let hOut = (hIn - filterSize + 2 * padding) + 1;
+    let wOut = (wIn - filterSize + 2 * padding) / stride + 1;
+    let hOut = (hIn - filterSize + 2 * padding) / stride + 1;
     const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "white", "gray")
     tensors.add(tensor.group)
 
@@ -111,15 +112,22 @@ function App() {
   const [channelIn, setChannelIn] = createSignal(3);
   const [channelOut, setChannelOut] = createSignal(5);
   const [padding, setPadding] = createSignal(1);
+  const [stride, setStride] = createSignal(1);
   createEffect(() => {
+    if (!isValid()) {
+      return
+    }
     populateTensors({
-      wIn: wIn(), hIn: hIn(), channelIn: channelIn(), padding: padding(), filterSize: filterSize(), channelOut: channelOut()
+      wIn: wIn(), hIn: hIn(), channelIn: channelIn(), padding: padding(), filterSize: filterSize(), channelOut: channelOut(), stride: stride()
     })
   });
 
-  populateTensors({
-    wIn: 5, hIn: 5, channelIn: 3, padding: 1, filterSize: 3, channelOut: 8
-  })
+  const isValid = () => {
+    const t1 = (wIn() - filterSize() + 2 * padding()) / stride()
+    const t2 = (hIn() - filterSize() + 2 * padding()) / stride()
+    return Number.isInteger(t1) && Number.isInteger(t2)
+  }
+
 
   const ambientLight = new THREE.AmbientLight(0xffffff, 1)
   scene.add(ambientLight);
@@ -139,13 +147,17 @@ function App() {
   return (
     <>
       <div id='renderer'>{renderer.domElement}</div>
-      <div>
-        <input type='number' value={filterSize()} onchange={(el) => setFilterSize(Number.parseInt(el.target.value))} />
-        <input type='number' value={wIn()} onchange={(el) => setWIn(Number.parseInt(el.target.value))} />
-        <input type='number' value={hIn()} onchange={(el) => setHIn(Number.parseInt(el.target.value))} />
-        <input type='number' value={channelIn()} onchange={(el) => setChannelIn(Number.parseInt(el.target.value))} />
-        <input type='number' value={channelOut()} onchange={(el) => setChannelOut(Number.parseInt(el.target.value))} />
-        <input type='number' value={padding()} onchange={(el) => setPadding(Number.parseInt(el.target.value))} />
+      <div id='param-controls'>
+        <NumberInput value={filterSize()} onchange={setFilterSize} label="filter size" />
+        <NumberInput value={wIn()} onchange={setWIn} label='width' />
+        <NumberInput value={hIn()} onchange={setHIn} label='height' />
+        <NumberInput value={channelIn()} onchange={setChannelIn} label='channel in' />
+        <NumberInput value={channelOut()} onchange={setChannelOut} label='channel out' />
+        <NumberInput value={padding()} onchange={setPadding} label='padding' />
+        <NumberInput value={stride()} onchange={setStride} label='stride' />
+        <Show when={!isValid()}>
+        <div class="alert">Invalid combination</div>
+        </Show>
       </div>
     </>
   )

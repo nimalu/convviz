@@ -1,0 +1,8 @@
+.number-input-wrapper {
+    display: grid;
+    justify-items: left;
+}
+
+.number-input-wrapper input {
+    max-width: 100px;
+}
