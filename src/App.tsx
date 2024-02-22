@@ -7,6 +7,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Show, createEffect, createSignal } from 'solid-js';
 import NumberInput from './components/NumberInput';
 import { debounce } from '@solid-primitives/scheduled';
+import Header from './components/Header';
 
 
 function createCube(color?: THREE.ColorRepresentation) {
@@ -189,6 +190,7 @@ function App() {
   return (
     <>
       <div id='param-controls'>
+        <Header />
         <NumberInput value={wIn()} onchange={setWIn} label='Width' />
         <NumberInput value={hIn()} onchange={setHIn} label='Height' />
         <NumberInput value={channelIn()} onchange={setChannelIn} label='Channel in' />

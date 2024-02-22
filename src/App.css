@@ -43,6 +43,12 @@
   gap: 16px;
 }
 
+
+#param-controls canvas {
+  width: 100px;
+  height: 100px;
+}
+
 .alert {
   font-weight: bold;
   color: red;
