@@ -45,8 +45,8 @@ function createBlocks(width: number, height: number, depth: number, color?: THRE
 }
 
 function createPaddedTensor(w: number, h: number, channels: number, padding: number, color1?: THREE.ColorRepresentation, color2?: THREE.ColorRepresentation) {
-  const blocks = createBlocks(channels, w + 2 * padding, h + 2 * padding, color2)
-  blocks.setColor([0, channels, padding, w + padding, padding, h + padding], new THREE.Color(color1 ?? "white"))
+  const blocks = createBlocks(channels, h + 2 * padding, w + 2 * padding, color2)
+  blocks.setColor([0, channels, padding, h + padding, padding, w + padding], new THREE.Color(color1 ?? "white"))
   blocks.group.position.set(0, 0, 0)
   return blocks
 }
@@ -56,14 +56,17 @@ function App() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xffffff)
   const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(40, 15, 30)
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  camera.position.set(0, 15, 30)
+  const renderer = new THREE.WebGLRenderer({ antialias: false });
   const labelRenderer = new CSS2DRenderer()
   labelRenderer.domElement.className = "label-renderer"
+  let canvasWrapper = document.querySelector("#renderer");
   function resizeCanvasToDisplaySize() {
-    const canvasWrapper = document.querySelector("#renderer");
     if (!canvasWrapper) {
-      return
+      canvasWrapper = document.querySelector("#renderer");
+      if (!canvasWrapper) {
+        return
+      }
     }
     const width = canvasWrapper.clientWidth;
     const height = canvasWrapper.clientHeight;
@@ -76,7 +79,6 @@ function App() {
     }
   }
   const controls = new OrbitControls(camera, labelRenderer.domElement);
-  controls.target = new THREE.Vector3(20, 0, 0)
   controls.update();
 
   const tensors = new THREE.Group()
@@ -90,23 +92,24 @@ function App() {
     let wOut = (wIn - filterSize + 2 * padding) / stride + 1;
     let hOut = (hIn - filterSize + 2 * padding) / stride + 1;
     const tensor = createPaddedTensor(wIn, hIn, channelIn, padding, "white", "gray")
+    tensor.group.position.set(-channelIn - 5, 0, 0)
     const tensorInLabelDiv = document.createElement('div');
     tensorInLabelDiv.className = 'label';
-    tensorInLabelDiv.innerHTML = `Input Tensor <br>${wIn}x${hIn}x${channelIn}`
+    tensorInLabelDiv.innerHTML = `Input Tensor <br>${wIn}x${hIn}x${channelIn} <br> (+padding)`
     const tensorInLabel = new CSS2DObject(tensorInLabelDiv);
-    tensorInLabel.position.set(channelIn / 2, 0, hIn + 4);
+    tensorInLabel.position.set(channelIn / 2, 0, wIn + padding * 2 + 4);
     tensor.group.add(tensorInLabel);
     tensors.add(tensor.group)
 
     const filterColors = ["blue", "cyan", "orange", "red", "yellow", "pink", "purple", "green"]
 
     let filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[0])
-    filter.group.position.set(15, 0, 0)
+    filter.group.position.set(0, hIn / 2 - filterSize / 2, wIn / 2 - filterSize / 2)
     tensors.add(filter.group)
 
     for (let i = 1; i < channelOut; i++) {
       filter = createPaddedTensor(filterSize, filterSize, channelIn, 0, filterColors[i % filterColors.length])
-      filter.group.position.set(15, 0, -wIn - (filterSize + 1) * i)
+      filter.group.position.set(0, hIn / 2 - filterSize / 2,  - (filterSize + 1) * (i+1))
       tensors.add(filter.group)
     }
 
@@ -114,14 +117,14 @@ function App() {
     filterLabelDiv.className = 'label';
     filterLabelDiv.innerHTML = `${channelOut} Filters<br>${filterSize}x${filterSize}x${channelIn}`
     const filterLabel = new CSS2DObject(filterLabelDiv);
-    filterLabel.position.set(15 + channelIn / 2, 0, hIn + 4);
+    filterLabel.position.set(channelIn * 1.5 + 5, 0, wIn + 4 + padding * 2);
     tensor.group.add(filterLabel);
 
 
     const tensorOut = createPaddedTensor(wOut, hOut, channelOut, 0)
-    tensorOut.group.position.set(30, 0, 0)
+    tensorOut.group.position.set(channelIn + 5, 0, 0)
     for (let i = 0; i < channelOut; i++) {
-      tensorOut.setColor([i, i + 1, 0, wOut, 0, hOut], new THREE.Color(filterColors[i % filterColors.length]))
+      tensorOut.setColor([i, i + 1, 0, hOut, 0, wOut], new THREE.Color(filterColors[i % filterColors.length]))
     }
     tensors.add(tensorOut.group)
 
@@ -129,7 +132,7 @@ function App() {
     tensorOutDiv.className = 'label';
     tensorOutDiv.innerHTML = `Output tensor <br>${wOut}x${hOut}x${channelOut}`
     const tensorOutLabel = new CSS2DObject(tensorOutDiv);
-    tensorOutLabel.position.set(30 + channelOut / 2, 0, hIn + 4);
+    tensorOutLabel.position.set(2 * channelIn + 10 + channelOut / 2, 0, wIn + 4 + padding * 2);
     tensor.group.add(tensorOutLabel);
   }
 
@@ -175,12 +178,12 @@ function App() {
 
   return (
     <>
-      <div id='renderer'>{renderer.domElement} {labelRenderer.domElement }</div>
+      <div id='renderer'>{renderer.domElement} {labelRenderer.domElement}</div>
       <div id='param-controls'>
-        <NumberInput value={filterSize()} onchange={setFilterSize} label="filter size" />
         <NumberInput value={wIn()} onchange={setWIn} label='width' />
         <NumberInput value={hIn()} onchange={setHIn} label='height' />
         <NumberInput value={channelIn()} onchange={setChannelIn} label='channel in' />
+        <NumberInput value={filterSize()} onchange={setFilterSize} label="filter size" />
         <NumberInput value={channelOut()} onchange={setChannelOut} label='channel out' />
         <NumberInput value={padding()} onchange={setPadding} label='padding' />
         <NumberInput value={stride()} onchange={setStride} label='stride' />
