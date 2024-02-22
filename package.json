@@ -15,6 +15,7 @@
     "three": "^0.161.0"
   },
   "devDependencies": {
+    "@types/chroma-js": "^2.4.4",
     "@types/three": "^0.161.2",
     "typescript": "^5.2.2",
     "vite": "^5.1.4",

@@ -3,7 +3,7 @@ import "./NumberInput.css"
 
 type props = { value: number, onchange: (newValue: number) => void, label: string }
 export default function NumberInput(props: props) {
-    const [local, others] = splitProps(props, ["value", "onchange", "label"])
+    const [local, _] = splitProps(props, ["value", "onchange", "label"])
     const id = createUniqueId()
 
     return <div class="number-input-wrapper">
