@@ -1,0 +1,20 @@
+{
+  "name": "convviz2",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "solid-js": "^1.8.15",
+    "three": "^0.161.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "vite": "^5.1.4",
+    "vite-plugin-solid": "^2.10.1"
+  }
+}
